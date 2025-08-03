@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>509</width>
+    <height>498</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Jornadas</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>InterfaceImages/313969136_5709585199110797_1271018789977176534_n.png</normaloff>InterfaceImages/313969136_5709585199110797_1271018789977176534_n.png</iconset>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(255, 255, 255);</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="frame_2">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>50</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>125</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QFrame" name="frame">
+         <property name="minimumSize">
+          <size>
+           <width>350</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>650</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_11">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(0, 0, 0);
+font: bold 12pt &quot;Nunito&quot;;</string>
+            </property>
+            <property name="text">
+             <string>Modificaciones de Jornadas</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_12">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>55</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(111, 111, 111);
+font: bold 7pt &quot;Nunito&quot;;</string>
+            </property>
+            <property name="text">
+             <string>Añade o actualiza la información de las jornadas.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="frame_3">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QFrame" name="frame_6">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_7">
+          <property name="leftMargin">
+           <number>50</number>
+          </property>
+          <property name="rightMargin">
+           <number>50</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_13">
+            <property name="minimumSize">
+             <size>
+              <width>125</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(0, 0, 0);
+font: bold 9pt &quot;Nunito&quot;;</string>
+            </property>
+            <property name="text">
+             <string>Nombre:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="le_agNombreJornada">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QLineEdit {
+    background-color: #f0f0f0; /* Color de fondo deseado */
+    border: 1px solid #ccc; /* Color del borde deseado */
+    padding: 5px; /* Espacio alrededor del texto */
+    color: rgb(0, 0, 0); /* Color del texto deseado */
+  	font: 9pt &quot;Nunito&quot;; /* Fuente deseada */
+    font-size: 14px; /* Tamaño de fuente deseado */
+    border-radius: 8px; /* Redondear las esquinas */
+}
+</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_8">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <property name="leftMargin">
+           <number>50</number>
+          </property>
+          <property name="rightMargin">
+           <number>50</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_15">
+            <property name="minimumSize">
+             <size>
+              <width>125</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(0, 0, 0);
+font: bold 9pt &quot;Nunito&quot;;</string>
+            </property>
+            <property name="text">
+             <string>Monto tarjeta:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="le_agMontoTarjeta">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QLineEdit {
+    background-color: #f0f0f0; /* Color de fondo deseado */
+    border: 1px solid #ccc; /* Color del borde deseado */
+    padding: 5px; /* Espacio alrededor del texto */
+    color: rgb(0, 0, 0); /* Color del texto deseado */
+  	font: 9pt &quot;Nunito&quot;; /* Fuente deseada */
+    font-size: 14px; /* Tamaño de fuente deseado */
+    border-radius: 8px; /* Redondear las esquinas */
+}
+</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_9">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_16">
+            <property name="minimumSize">
+             <size>
+              <width>125</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>0</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(0, 0, 0);
+font: bold 9pt &quot;Nunito&quot;;</string>
+            </property>
+            <property name="text">
+             <string>Monto Efectivo:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="le_agMontoEfectivo">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QLineEdit {
+    background-color: #f0f0f0; /* Color de fondo deseado */
+    border: 1px solid #ccc; /* Color del borde deseado */
+    padding: 5px; /* Espacio alrededor del texto */
+    color: rgb(0, 0, 0); /* Color del texto deseado */
+  	font: 9pt &quot;Nunito&quot;; /* Fuente deseada */
+    font-size: 14px; /* Tamaño de fuente deseado */
+    border-radius: 8px; /* Redondear las esquinas */
+}
+</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_10">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QLabel" name="label_17">
+            <property name="minimumSize">
+             <size>
+              <width>125</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>0</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(0, 0, 0);
+font: bold 9pt &quot;Nunito&quot;;</string>
+            </property>
+            <property name="text">
+             <string>Monto Mínimo:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="le_agMontoEfectivo_2">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QLineEdit {
+    background-color: #f0f0f0; /* Color de fondo deseado */
+    border: 1px solid #ccc; /* Color del borde deseado */
+    padding: 5px; /* Espacio alrededor del texto */
+    color: rgb(0, 0, 0); /* Color del texto deseado */
+  	font: 9pt &quot;Nunito&quot;; /* Fuente deseada */
+    font-size: 14px; /* Tamaño de fuente deseado */
+    border-radius: 8px; /* Redondear las esquinas */
+}
+</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="frame_4">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>100</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>100</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>189</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_agregar_jorna">
+         <property name="minimumSize">
+          <size>
+           <width>125</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>125</width>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    border: 1px solid #ccc;
+    border-radius: 10px;           /* Bordes redondeados con radio de 10 píxeles */
+    padding: 5px;
+	font: bold 9pt &quot;Nunito&quot;;                  /* Espaciado interno del botón */
+}
+
+QPushButton:hover{
+font: bold 9pt &quot;Nunito&quot;;
+background-color: #f0f0f0; /* Color de fondo deseado */
+}
+</string>
+         </property>
+         <property name="text">
+          <string>Agregar</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>InterfaceImages/lista-de-verificacion (1).png</normaloff>InterfaceImages/lista-de-verificacion (1).png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_8">
+         <property name="minimumSize">
+          <size>
+           <width>125</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>125</width>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    border: 1px solid #ccc;
+    border-radius: 10px;           /* Bordes redondeados con radio de 10 píxeles */
+    padding: 5px;
+	font: bold 9pt &quot;Nunito&quot;;                  /* Espaciado interno del botón */
+}
+
+QPushButton:hover{
+font: bold 9pt &quot;Nunito&quot;;
+background-color: #f0f0f0; /* Color de fondo deseado */
+}
+</string>
+         </property>
+         <property name="text">
+          <string>Cancelar</string>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>InterfaceImages/eliminar.png</normaloff>InterfaceImages/eliminar.png</iconset>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

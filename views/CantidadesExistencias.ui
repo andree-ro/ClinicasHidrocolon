@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>650</width>
+    <height>500</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Agregar al Carrito</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(255, 255, 255);</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_main">
+    <property name="spacing">
+     <number>10</number>
+    </property>
+    <property name="leftMargin">
+     <number>15</number>
+    </property>
+    <property name="topMargin">
+     <number>15</number>
+    </property>
+    <property name="rightMargin">
+     <number>15</number>
+    </property>
+    <property name="bottomMargin">
+     <number>15</number>
+    </property>
+
+    <!-- TÍTULO PRINCIPAL -->
+    <item>
+     <widget class="QLabel" name="label_titulo">
+      <property name="styleSheet">
+       <string notr="true">color: rgb(0, 0, 0);
+font: bold 14pt "Nunito";</string>
+      </property>
+      <property name="text">
+       <string>Agregar Productos al Carrito</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+
+    <!-- SECCIÓN DE BÚSQUEDA -->
+    <item>
+     <widget class="QFrame" name="frame_busqueda">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QFrame { border: 1px solid #ddd; border-radius: 8px; padding: 10px; }</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_busqueda">
+       <item>
+        <widget class="QLabel" name="label_busqueda">
+         <property name="styleSheet">
+          <string notr="true">color: rgb(0, 0, 0);
+font: bold 11pt "Nunito";</string>
+         </property>
+         <property name="text">
+          <string>🔍 Buscar Productos</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_busqueda">
+         <item>
+          <widget class="QLineEdit" name="lineEdit_busqueda">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLineEdit {
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    padding: 8px;
+    color: rgb(0, 0, 0);
+    font: 10pt "Nunito";
+    border-radius: 8px;
+}
+QLineEdit:focus {
+    border: 2px solid #007bff;
+    background-color: white;
+}</string>
+           </property>
+           <property name="placeholderText">
+            <string>Escribe para buscar medicamentos, terapias, extras...</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_limpiar_busqueda">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>80</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 5px;
+    font: bold 9pt "Nunito";
+    background-color: #f8f9fa;
+}
+QPushButton:hover {
+    background-color: #e9ecef;
+}</string>
+           </property>
+           <property name="text">
+            <string>Limpiar</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_contador">
+         <property name="styleSheet">
+          <string notr="true">color: rgb(100, 100, 100);
+font: 9pt "Nunito";</string>
+         </property>
+         <property name="text">
+          <string>Escribe para buscar productos...</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <!-- TABLA DE RESULTADOS -->
+    <item>
+     <widget class="QTableWidget" name="tabla_resultados">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>200</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QTableWidget {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+    gridline-color: #f0f0f0;
+    font: 9pt "Nunito";
+}
+QTableWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+QTableWidget::item:selected {
+    background-color: #e3f2fd;
+    color: black;
+}
+QHeaderView::section {
+    background-color: #f8f9fa;
+    padding: 8px;
+    border: 1px solid #ddd;
+    font: bold 9pt "Nunito";
+}</string>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SingleSelection</enum>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <column>
+       <property name="text">
+        <string>Tipo</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Nombre</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Presentación</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Stock</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Precio</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+
+    <!-- INFORMACIÓN DEL PRODUCTO SELECCIONADO -->
+    <item>
+     <widget class="QFrame" name="frame_seleccionado">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QFrame {
+    border: 2px solid #28a745;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f8fff9;
+}</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_seleccionado">
+       <item>
+        <widget class="QLabel" name="label_producto_seleccionado">
+         <property name="styleSheet">
+          <string notr="true">color: rgb(0, 0, 0);
+font: bold 11pt "Nunito";</string>
+         </property>
+         <property name="text">
+          <string>📦 Producto seleccionado: Ninguno</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_cantidad">
+         <item>
+          <widget class="QLabel" name="label_cantidad">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(0, 0, 0);
+font: bold 10pt "Nunito";</string>
+           </property>
+           <property name="text">
+            <string>Cantidad:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_cantidad">
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>100</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLineEdit {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 5px;
+    color: rgb(0, 0, 0);
+    font: 10pt "Nunito";
+    border-radius: 8px;
+}
+QLineEdit:focus {
+    border: 2px solid #007bff;
+    background-color: white;
+}</string>
+           </property>
+           <property name="placeholderText">
+            <string>1</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_stock_disponible">
+           <property name="styleSheet">
+            <string notr="true">color: rgb(100, 100, 100);
+font: 9pt "Nunito";</string>
+           </property>
+           <property name="text">
+            <string>Stock disponible: --</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <!-- BOTONES -->
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_botones">
+      <item>
+       <spacer name="horizontalSpacer_left">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_agregar">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    border: 2px solid #28a745;
+    border-radius: 10px;
+    padding: 8px;
+    font: bold 10pt "Nunito";
+    background-color: #28a745;
+    color: white;
+}
+QPushButton:hover {
+    background-color: #218838;
+}
+QPushButton:disabled {
+    background-color: #6c757d;
+    border: 2px solid #6c757d;
+}</string>
+        </property>
+        <property name="text">
+         <string>✅ Agregar al Carrito</string>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_cancelar">
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    border: 1px solid #dc3545;
+    border-radius: 10px;
+    padding: 8px;
+    font: bold 10pt "Nunito";
+    background-color: white;
+    color: #dc3545;
+}
+QPushButton:hover {
+    background-color: #dc3545;
+    color: white;
+}</string>
+        </property>
+        <property name="text">
+         <string>❌ Cancelar</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_right">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
