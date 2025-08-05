@@ -25,6 +25,20 @@ class CierreApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("Sistema de Cierre")
         self.setGeometry(700, 100, 800, 700)  # Incrementado el tamaño para acomodar las tablas
+        # Denominaciones de billetes y monedas
+        self.denominaciones = [
+            ("Billetes de", 200.00, "Q200"),
+            ("Billetes de", 100.00, "Q100"),
+            ("Billetes de", 50.00, "Q50"),
+            ("Billetes de", 20.00, "Q20"),
+            ("Billetes de", 10.00, "Q10"),
+            ("Billetes de", 5.00, "Q5"),
+            ("Monedas", 1.00, "Q1"),
+            ("Monedas", 0.50, "Q0.50"),
+            ("Monedas", 0.25, "Q0.25"),
+            ("Monedas", 0.10, "Q0.10"),
+            ("Monedas", 0.05, "Q0.05")
+        ]
 
         # Conexión a la base de datos
         try:
@@ -324,13 +338,13 @@ class CierreApp(QMainWindow):
 
         tables_layout.addLayout(left_tables_layout)
 
-        # Panel de confirmación a la derecha
+        # Panel de confirmación a la derecha (más ancho)
         self.crear_panel_confirmacion(tables_layout)
 
         main_layout.addLayout(tables_layout)
 
     def crear_panel_confirmacion(self, parent_layout):
-        """Crea el panel de confirmación de dinero físico"""
+        """Crea el panel de confirmación de dinero físico - ORIGINAL"""
 
         confirmacion_frame = QFrame()
         confirmacion_frame.setFrameShape(QFrame.StyledPanel)
@@ -344,21 +358,26 @@ class CierreApp(QMainWindow):
         confirmacion_title.setWordWrap(True)
         confirmacion_layout.addWidget(confirmacion_title)
 
-        # Campos
+        # NUEVO: Botón para abrir ventana de denominaciones
+        btn_abrir_denominaciones = QPushButton("💰 Ingresar Efectivo Físico")
+        btn_abrir_denominaciones.clicked.connect(self.abrir_ventana_denominaciones)
+        btn_abrir_denominaciones.setStyleSheet(
+            "QPushButton { background-color: #28a745; color: white; font-weight: bold; padding: 10px; border-radius: 5px; }")
+        confirmacion_layout.addWidget(btn_abrir_denominaciones)
+
+        # Campo para mostrar el total (solo lectura)
+        self.lbl_efectivo_fisico_total = QLabel("Efectivo físico: Q0.00")
+        self.lbl_efectivo_fisico_total.setStyleSheet(
+            "background-color: #e9ecef; padding: 8px; border-radius: 3px; font-weight: bold;")
+        confirmacion_layout.addWidget(self.lbl_efectivo_fisico_total)
+
+        # Campo de cheques
         form_layout = QGridLayout()
-
-        form_layout.addWidget(QLabel("Efectivo en caja:"), 0, 0)
-        self.txt_efectivo_fisico = QLineEdit()
-        self.txt_efectivo_fisico.setValidator(QDoubleValidator())
-        self.txt_efectivo_fisico.textChanged.connect(self.verificar_cuadre)
-        form_layout.addWidget(self.txt_efectivo_fisico, 0, 1)
-
-        form_layout.addWidget(QLabel("Cheques:"), 1, 0)
-        self.txt_cheques_fisicos = QLineEdit()
+        form_layout.addWidget(QLabel("Cheques:"), 0, 0)
+        self.txt_cheques_fisicos = QLineEdit("0.00")
         self.txt_cheques_fisicos.setValidator(QDoubleValidator())
         self.txt_cheques_fisicos.textChanged.connect(self.verificar_cuadre)
-        form_layout.addWidget(self.txt_cheques_fisicos, 1, 1)
-
+        form_layout.addWidget(self.txt_cheques_fisicos, 0, 1)
         confirmacion_layout.addLayout(form_layout)
 
         # Tabla de verificación
@@ -389,14 +408,77 @@ class CierreApp(QMainWindow):
             "background-color: #FFF3CD; border: 1px solid #FFEAA7; padding: 8px; border-radius: 4px;")
         confirmacion_layout.addWidget(self.lbl_estado_cuadre)
 
-        # Botón confirmar cuadre
+        # Botón de confirmación
         self.btn_confirmar_cuadre = QPushButton("Confirmar Cuadre")
         self.btn_confirmar_cuadre.clicked.connect(self.confirmar_cuadre_final)
         self.btn_confirmar_cuadre.setEnabled(False)
         confirmacion_layout.addWidget(self.btn_confirmar_cuadre)
 
-        confirmacion_layout.addStretch()
         parent_layout.addWidget(confirmacion_frame)
+
+    def limpiar_tabla_efectivo_fisico(self):
+        """Limpiar toda la tabla de efectivo físico"""
+        for row in range(self.tabla_efectivo_fisico.rowCount()):
+            cantidad_item = self.tabla_efectivo_fisico.item(row, 0)
+            total_item = self.tabla_efectivo_fisico.item(row, 2)
+
+            cantidad_item.setText("0")
+            total_item.setText("0.00")
+
+        self.actualizar_total_efectivo_general()
+
+    def calcular_total_efectivo_fisico(self, item):
+        """Calcular el total de efectivo físico cuando cambia una cantidad"""
+        try:
+            if item.column() == 0:  # Solo si cambió la cantidad
+                row = item.row()
+
+                # Obtener cantidad ingresada
+                cantidad_text = item.text().strip()
+                if not cantidad_text:
+                    cantidad = 0
+                else:
+                    cantidad = int(cantidad_text)
+
+                # Obtener valor unitario
+                valor_unitario = self.denominaciones[row][1]
+
+                # Calcular total para esta fila
+                total_fila = cantidad * valor_unitario
+
+                # Actualizar columna total
+                total_item = self.tabla_efectivo_fisico.item(row, 2)
+                total_item.setText(f"{total_fila:.2f}")
+
+                # Actualizar total general
+                self.actualizar_total_efectivo_general()
+
+        except (ValueError, TypeError):
+            # Si hay error en la conversión, poner 0
+            item.setText("0")
+
+    def actualizar_total_efectivo_general(self):
+        """Actualizar el total general de efectivo físico"""
+        total = 0.0
+
+        for row in range(self.tabla_efectivo_fisico.rowCount()):
+            total_item = self.tabla_efectivo_fisico.item(row, 2)
+            if total_item:
+                total_text = total_item.text().replace(',', '')
+                try:
+                    total += float(total_text)
+                except ValueError:
+                    pass
+
+        # Actualizar label del total
+        self.lbl_total_efectivo_fisico.setText(f"TOTAL EFECTIVO: Q{total:.2f}")
+
+        # Actualizar también en la tabla de verificación
+        if hasattr(self, 'tabla_verificacion'):
+            self.tabla_verificacion.item(1, 1).setText(f"{total:.2f}")
+
+        # Verificar cuadre automáticamente
+        self.verificar_cuadre()
 
     def crear_seccion_confirmacion_y_botones_principales(self, main_layout):
         """Crea los botones principales (Guardar, Exportar, Cierre por Turno)"""
@@ -879,7 +961,7 @@ class CierreApp(QMainWindow):
                 return
 
             # Obtener valores ingresados por el usuario
-            efectivo_fisico = float(self.txt_efectivo_fisico.text() or 0)
+            efectivo_fisico = self.obtener_total_efectivo_fisico()
             cheques_fisicos = float(self.txt_cheques_fisicos.text() or 0)
 
             # ✅ CORRECCIÓN: Efectivo calculado = inicial + ventas (SIN restar impuestos)
@@ -3356,3 +3438,47 @@ class CierreApp(QMainWindow):
         except Exception as e:
             print(f"❌ Error al crear tabla: {e}")
             return False
+
+
+
+    def abrir_ventana_denominaciones(self):
+        """Abrir ventana para ingresar denominaciones físicas"""
+        try:
+            from .ventana_denominaciones import VentanaDenominaciones
+            self.ventana_denominaciones = VentanaDenominaciones(self)
+            self.ventana_denominaciones.show()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al abrir ventana: {e}")
+
+    def actualizar_efectivo_fisico(self, total_efectivo):
+        """Recibir el total de efectivo físico desde la ventana de denominaciones"""
+        try:
+            # Actualizar el label de efectivo físico
+            self.lbl_efectivo_fisico_total.setText(f"Efectivo físico: Q{total_efectivo:.2f}")
+
+            # Actualizar también en la tabla de verificación
+            if hasattr(self, 'tabla_verificacion'):
+                self.tabla_verificacion.item(1, 1).setText(f"{total_efectivo:.2f}")
+
+            # Verificar cuadre automáticamente
+            self.verificar_cuadre()
+
+            print(f"✅ Efectivo físico actualizado: Q{total_efectivo:.2f}")
+
+        except Exception as e:
+            print(f"❌ Error actualizando efectivo físico: {e}")
+
+    def obtener_total_efectivo_fisico(self):
+        """Obtener el total de efectivo físico (modificado para usar el label)"""
+        try:
+            # Extraer el valor del label
+            texto = self.lbl_efectivo_fisico_total.text()
+            # Buscar el patrón "Q" seguido del número
+            import re
+            match = re.search(r'Q([\d.]+)', texto)
+            if match:
+                return float(match.group(1))
+            return 0.0
+        except:
+            return 0.0
+
