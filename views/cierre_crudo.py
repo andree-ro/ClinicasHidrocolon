@@ -52,6 +52,56 @@ class CierreApp(QMainWindow):
         if self.db_connection:
             self.obtener_datos_db()
 
+    def capitalizar_texto(self, texto):
+        """
+        Función auxiliar para capitalizar correctamente los textos
+        - Primera letra de cada frase en mayúscula
+        - Resto en minúsculas
+        - Respeta nombres propios básicos
+        """
+        if not texto:
+            return ""
+
+        # Convertir a string si no lo es
+        texto = str(texto)
+
+        # Casos especiales que deben mantenerse en mayúsculas
+        palabras_especiales = ['ID', 'PDF', 'POS', 'BD', 'CEO', 'CFO', 'CTO', 'IV', 'III', 'II', 'VI', 'VII', 'VIII',
+                               'IX', 'X']
+
+        # Dividir en palabras
+        palabras = texto.split()
+        resultado = []
+
+        for palabra in palabras:
+            # Si es una palabra especial, mantenerla en mayúsculas
+            if palabra.upper() in palabras_especiales:
+                resultado.append(palabra.upper())
+            # Si es la primera palabra, capitalizar
+            elif len(resultado) == 0:
+                resultado.append(palabra.capitalize())
+            # Si es después de punto, capitalizar
+            elif len(resultado) > 0 and resultado[-1].endswith('.'):
+                resultado.append(palabra.capitalize())
+            # Si contiene números (como códigos), mantener como está
+            elif any(char.isdigit() for char in palabra):
+                resultado.append(palabra)
+            # Resto en minúsculas
+            else:
+                resultado.append(palabra.lower())
+
+        return ' '.join(resultado)
+
+    def formatear_nombre_producto(self, nombre):
+        """Formatea específicamente nombres de productos"""
+        if not nombre:
+            return ""
+
+        # Remover emojis de ajuste si existen
+        nombre_limpio = str(nombre).replace("🔧 AJUSTE:", "").strip()
+
+        # Capitalizar correctamente
+        return self.capitalizar_texto(nombre_limpio)
 
     def crear_tablas_cierre(self):
         """Crear las tablas para cierre crudo y neto si no existen"""
@@ -1579,7 +1629,7 @@ class CierreApp(QMainWindow):
             return False
 
     def exportar_reporte(self):
-        """EXPORTA REPORTE PDF CON 6 TABLAS ESTRUCTURADAS Y TODO EN MAYÚSCULAS"""
+        """EXPORTA REPORTE PDF - VERSIÓN CON FORMATO PROFESIONAL"""
         try:
             from datetime import datetime
             import os
@@ -1590,7 +1640,7 @@ class CierreApp(QMainWindow):
             from reportlab.lib.units import inch
 
             if not hasattr(self, 'valores_crudo') or not hasattr(self, 'valores_neto'):
-                QMessageBox.warning(self, "Advertencia", "Primero debe calcular el Cierre")
+                QMessageBox.warning(self, "Advertencia", "Primero debe calcular el cierre")
                 return False
 
             # Crear carpeta para reportes si no existe
@@ -1612,38 +1662,77 @@ class CierreApp(QMainWindow):
             subtitle_style = styles['Heading2']
             normal_style = styles['Normal']
 
-            # Título del reporte
-            elements.append(Paragraph("REPORTE DE CIERRE - " + fecha_actual.upper(), title_style))
+            # Título del reporte - CORREGIDO: Solo primera letra mayúscula
+            elements.append(Paragraph(f"Reporte de cierre - {fecha_actual}", title_style))
             elements.append(Spacer(1, 0.3 * inch))
 
             # =====================================================
-            # PRODUCTOS VENDIDOS HOY
+            # PRODUCTOS VENDIDOS HOY - CORREGIDO
             # =====================================================
             try:
-                elements.append(Paragraph("PRODUCTOS VENDIDOS HOY", subtitle_style))
+                elements.append(Paragraph("Productos vendidos hoy", subtitle_style))
 
                 fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+                print(f"🔍 Buscando productos para la fecha: {fecha_hoy}")
+
+                # CORREGIDO: Consulta mejorada para asegurar que funcione
                 self.cursor.execute("""
-                                    SELECT id, nombre, cantidad, tarjeta, efectivo, monto, usuario
+                                    SELECT id,
+                                           nombre,
+                                           cantidad,
+                                           tarjeta,
+                                           efectivo,
+                                           monto,
+                                           usuario,
+                                           fecha
                                     FROM cierre
                                     WHERE DATE (fecha) = %s
                                     ORDER BY fecha DESC
                                     """, (fecha_hoy,))
                 productos_vendidos = self.cursor.fetchall()
 
+                print(f"📊 Productos encontrados: {len(productos_vendidos)}")
+
                 if productos_vendidos:
-                    data_productos = [["ID", "NOMBRE", "CANTIDAD", "TARJETA", "EFECTIVO", "MONTO TOTAL", "USUARIO"]]
+                    # CORREGIDO: Encabezados en formato normal
+                    data_productos = [["ID", "Nombre", "Cantidad", "Tarjeta", "Efectivo", "Monto total", "Usuario"]]
+
+                    total_efectivo_productos = 0
+                    total_tarjeta_productos = 0
+                    total_monto_productos = 0
 
                     for producto in productos_vendidos:
+                        print(f"📝 Producto: {producto[1]} - Q{float(producto[5]):.2f}")
+
+                        # Función simple para capitalizar
+                        def capitalizar_texto(texto):
+                            if not texto:
+                                return ""
+                            return str(texto).strip().capitalize()
+
                         data_productos.append([
                             str(producto[0]),
-                            str(producto[1]).upper(),
+                            capitalizar_texto(producto[1]),  # CORREGIDO: Solo primera letra mayúscula
                             str(producto[2]),
                             f"Q{float(producto[3]):.2f}",
                             f"Q{float(producto[4]):.2f}",
                             f"Q{float(producto[5]):.2f}",
-                            str(producto[6]).upper()
+                            capitalizar_texto(producto[6])  # CORREGIDO: Solo primera letra mayúscula
                         ])
+
+                        # Sumar totales
+                        total_efectivo_productos += float(producto[4])
+                        total_tarjeta_productos += float(producto[3])
+                        total_monto_productos += float(producto[5])
+
+                    # Agregar fila de totales
+                    data_productos.append([
+                        "", "TOTALES", "",
+                        f"Q{total_tarjeta_productos:.2f}",
+                        f"Q{total_efectivo_productos:.2f}",
+                        f"Q{total_monto_productos:.2f}",
+                        ""
+                    ])
 
                     tabla_productos = Table(data_productos,
                                             colWidths=[0.8 * inch, 2 * inch, 1 * inch, 1 * inch, 1 * inch, 1 * inch,
@@ -1655,37 +1744,76 @@ class CierreApp(QMainWindow):
                         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                         ('FONTSIZE', (0, 0), (-1, -1), 9),
                         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                        ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
+                        # Fila de totales en color diferente
+                        ('BACKGROUND', (0, -1), (-1, -1), colors.lightblue),
+                        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
                         ('GRID', (0, 0), (-1, -1), 1, colors.black)
                     ]))
                     elements.append(tabla_productos)
+
+                    print(f"✅ Tabla de productos creada con {len(productos_vendidos)} productos")
                 else:
-                    elements.append(Paragraph("NO HAY PRODUCTOS VENDIDOS HOY", normal_style))
+                    print("⚠️ No se encontraron productos vendidos hoy")
+                    elements.append(Paragraph("No hay productos vendidos hoy", normal_style))
+
+                    # Debug: Verificar si hay datos en la tabla
+                    self.cursor.execute("SELECT COUNT(*) FROM cierre")
+                    total_registros = self.cursor.fetchone()[0]
+                    print(f"🔍 Total de registros en tabla cierre: {total_registros}")
+
+                    # Verificar registros de hoy con más detalle
+                    self.cursor.execute("""
+                                        SELECT DATE (fecha), COUNT (*)
+                                        FROM cierre
+                                        GROUP BY DATE (fecha)
+                                        ORDER BY DATE (fecha) DESC
+                                            LIMIT 5
+                                        """)
+                    fechas_disponibles = self.cursor.fetchall()
+                    print(f"📅 Fechas disponibles en BD: {fechas_disponibles}")
 
                 elements.append(Spacer(1, 0.3 * inch))
             except Exception as e:
-                print(f"Error al obtener productos: {e}")
+                print(f"❌ Error al obtener productos: {e}")
+                import traceback
+                traceback.print_exc()
+                elements.append(Paragraph(f"Error al cargar productos: {str(e)}", normal_style))
 
             # =====================================================
-            # TABLA 1: CIERRE - INGRESOS
+            # TABLA 1: INGRESOS - CORREGIDO
             # =====================================================
-            elements.append(Paragraph("CIERRE", subtitle_style))
-            elements.append(Paragraph("INGRESOS:", styles['Heading3']))
+            elements.append(Paragraph("Cierre", subtitle_style))
+            elements.append(Paragraph("Ingresos:", styles['Heading3']))
 
-            # Obtener valores de entrada (sin restar nada)
-            ingreso_efectivo = float(self.txt_ingreso_efectivo.text() or '0')
-            ingreso_tarjeta = float(self.txt_ingreso_tarjeta.text() or '0')
-            ingreso_transferencia = float(self.txt_ingreso_transferencia.text() or '0')
-            ingreso_depositos = 0.0  # Agregar si tienes este campo
-            total_ingresos = ingreso_efectivo + ingreso_tarjeta + ingreso_transferencia + ingreso_depositos
+            # Obtener valores de manera segura
+            try:
+                ingreso_efectivo = float(getattr(self, 'txt_ingreso_efectivo', None).text() if hasattr(self,
+                                                                                                       'txt_ingreso_efectivo') and self.txt_ingreso_efectivo else 0)
+            except:
+                ingreso_efectivo = self.valores_crudo.get('ventas_efectivo', 0)
 
+            try:
+                ingreso_tarjeta = float(getattr(self, 'txt_ingreso_tarjeta', None).text() if hasattr(self,
+                                                                                                     'txt_ingreso_tarjeta') and self.txt_ingreso_tarjeta else 0)
+            except:
+                ingreso_tarjeta = self.valores_crudo.get('ventas_tarjeta', 0)
+
+            try:
+                ingreso_transferencia = float(getattr(self, 'txt_ingreso_transferencia', None).text() if hasattr(self,
+                                                                                                                 'txt_ingreso_transferencia') and self.txt_ingreso_transferencia else 0)
+            except:
+                ingreso_transferencia = self.valores_crudo.get('ventas_transferencia', 0)
+
+            total_ingresos = ingreso_efectivo + ingreso_tarjeta + ingreso_transferencia
+
+            # CORREGIDO: Conceptos en formato normal
             data_ingresos = [
-                ["CONCEPTO", "VALOR"],
-                ["INGRESO EFECTIVO", f"Q{ingreso_efectivo:.2f}"],
-                ["INGRESO TARJETA", f"Q{ingreso_tarjeta:.2f}"],
-                ["INGRESO TRANSFERENCIA", f"Q{ingreso_transferencia:.2f}"],
-                ["INGRESOS DEPÓSITOS", f"Q{ingreso_depositos:.2f}"],
-                ["TOTAL DE INGRESOS", f"Q{total_ingresos:.2f}"]
+                ["Concepto", "Valor"],
+                ["Ingreso efectivo", f"Q{ingreso_efectivo:.2f}"],
+                ["Ingreso tarjeta", f"Q{ingreso_tarjeta:.2f}"],
+                ["Ingreso transferencia", f"Q{ingreso_transferencia:.2f}"],
+                ["Total ingresos", f"Q{total_ingresos:.2f}"]
             ]
 
             tabla_ingresos = Table(data_ingresos, colWidths=[3 * inch, 1.5 * inch])
@@ -1702,38 +1830,52 @@ class CierreApp(QMainWindow):
                 ('GRID', (0, 0), (-1, -1), 1, colors.black)
             ]))
             elements.append(tabla_ingresos)
-            elements.append(Spacer(1, 0.2 * inch))
+            elements.append(Spacer(1, 0.3 * inch))
 
             # =====================================================
-            # TABLA 2: RESULTADOS DEL CIERRE
+            # TABLA 2: GASTOS Y DEDUCCIONES - CORREGIDO
             # =====================================================
-            elements.append(Paragraph("RESULTADOS DEL CIERRE:", styles['Heading3']))
+            elements.append(Paragraph("Gastos y deducciones:", styles['Heading3']))
 
-            venta_neta = total_ingresos
-            gastos = self.valores_crudo.get('gastos', 0)
-            visa = self.valores_crudo.get('visa', 0)
-            comisiones_bancarias = ingreso_tarjeta * 0.06  # 6% sobre tarjeta
-            comision_dra = self.valores_crudo.get('comision_dra', 0)
-            impuestos_efectivo = self.valores_crudo.get('impuestos_efectivo', 0)
-            impuestos_transferencia = self.valores_crudo.get('impuestos_transferencia', 0)
-            impuestos_visa = self.valores_crudo.get('impuestos_visa', 0)
-            totales_cierre = venta_neta + gastos + comisiones_bancarias + comision_dra + impuestos_efectivo + impuestos_transferencia + impuestos_visa
+            # Obtener valores de manera segura
+            try:
+                gastos = float(
+                    getattr(self, 'txt_gastos', None).text() if hasattr(self, 'txt_gastos') and self.txt_gastos else 0)
+            except:
+                gastos = self.valores_crudo.get('gastos', 0)
 
-            data_resultados = [
-                ["CONCEPTO", "VALOR"],
-                ["VENTA NETA", f"Q{venta_neta:.2f}"],
-                ["GASTOS", f"Q{gastos:.2f}"],
-                ["VISA", f"Q{visa:.2f}"],
-                ["COMISIONES BANCARIAS", f"Q{comisiones_bancarias:.2f}"],
-                ["COMISIÓN DRA", f"Q{comision_dra:.2f}"],
-                ["IMPUESTOS EFECTIVO", f"Q{impuestos_efectivo:.2f}"],
-                ["IMPUESTOS TRANSFERENCIA", f"Q{impuestos_transferencia:.2f}"],
-                ["IMPUESTOS VISA", f"Q{impuestos_visa:.2f}"],
-                ["TOTALES", f"Q{totales_cierre:.2f}"]
+            try:
+                comisiones = float(getattr(self, 'txt_comisiones', None).text() if hasattr(self,
+                                                                                           'txt_comisiones') and self.txt_comisiones else 0)
+            except:
+                comisiones = self.valores_crudo.get('comisiones', 0)
+
+            try:
+                impuestos = float(getattr(self, 'txt_impuestos', None).text() if hasattr(self,
+                                                                                         'txt_impuestos') and self.txt_impuestos else 0)
+            except:
+                impuestos = self.valores_crudo.get('impuestos', 0)
+
+            try:
+                impuestos_visa = float(getattr(self, 'txt_impuestos_visa', None).text() if hasattr(self,
+                                                                                                   'txt_impuestos_visa') and self.txt_impuestos_visa else 0)
+            except:
+                impuestos_visa = self.valores_crudo.get('impuestos_visa', 0)
+
+            totales_cierre = gastos + comisiones + impuestos + impuestos_visa
+
+            # CORREGIDO: Conceptos en formato normal
+            data_gastos = [
+                ["Concepto", "Valor"],
+                ["Gastos", f"Q{gastos:.2f}"],
+                ["Comisiones", f"Q{comisiones:.2f}"],
+                ["Impuestos", f"Q{impuestos:.2f}"],
+                ["Impuestos visa", f"Q{impuestos_visa:.2f}"],
+                ["Totales", f"Q{totales_cierre:.2f}"]
             ]
 
-            tabla_resultados = Table(data_resultados, colWidths=[3 * inch, 1.5 * inch])
-            tabla_resultados.setStyle(TableStyle([
+            tabla_gastos = Table(data_gastos, colWidths=[3 * inch, 1.5 * inch])
+            tabla_gastos.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -1745,26 +1887,27 @@ class CierreApp(QMainWindow):
                 ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black)
             ]))
-            elements.append(tabla_resultados)
+            elements.append(tabla_gastos)
             elements.append(Spacer(1, 0.3 * inch))
 
             # =====================================================
-            # TABLA 3: CIERRE NETO - INGRESOS NETOS
+            # TABLA 3: CIERRE NETO - INGRESOS NETOS (CORREGIDO)
             # =====================================================
-            elements.append(Paragraph("CIERRE NETO", subtitle_style))
-            elements.append(Paragraph("INGRESOS NETOS:", styles['Heading3']))
+            elements.append(Paragraph("Cierre neto", subtitle_style))
+            elements.append(Paragraph("Ingresos netos:", styles['Heading3']))
 
             efectivo_neto = self.valores_neto.get('efectivo_neto', 0)
             tarjeta_neto = self.valores_neto.get('tarjeta_neto', 0)
             transferencia_neto = self.valores_neto.get('transferencia_neto', 0)
             total_ingresos_netos = self.valores_neto.get('total_ingresos_netos', 0)
 
+            # CORREGIDO: Conceptos en formato normal
             data_ingresos_netos = [
-                ["CONCEPTO", "VALOR"],
-                ["EFECTIVO NETO", f"Q{efectivo_neto:.2f}"],
-                ["TARJETA NETO", f"Q{tarjeta_neto:.2f}"],
-                ["TRANSFERENCIA NETO", f"Q{transferencia_neto:.2f}"],
-                ["TOTAL INGRESOS NETOS", f"Q{total_ingresos_netos:.2f}"]
+                ["Concepto", "Valor"],
+                ["Efectivo neto", f"Q{efectivo_neto:.2f}"],
+                ["Tarjeta neto", f"Q{tarjeta_neto:.2f}"],
+                ["Transferencia neto", f"Q{transferencia_neto:.2f}"],
+                ["Total ingresos netos", f"Q{total_ingresos_netos:.2f}"]
             ]
 
             tabla_ingresos_netos = Table(data_ingresos_netos, colWidths=[3 * inch, 1.5 * inch])
@@ -1784,23 +1927,24 @@ class CierreApp(QMainWindow):
             elements.append(Spacer(1, 0.2 * inch))
 
             # =====================================================
-            # TABLA 4: GASTOS Y DEDUCCIONES
+            # TABLA 4: GASTOS Y DEDUCCIONES NETO (CORREGIDO)
             # =====================================================
-            elements.append(Paragraph("GASTOS Y DEDUCCIONES:", styles['Heading3']))
+            elements.append(Paragraph("Gastos y deducciones:", styles['Heading3']))
 
             total_gastos = self.valores_neto.get('total_gastos', 0)
             total_impuestos = self.valores_neto.get('total_impuestos', 0)
             comisiones_bancarias_neto = self.valores_neto.get('comisiones_bancarias', 0)
-            comisiones = self.valores_neto.get('comisiones', 0)
+            comisiones_neto = self.valores_neto.get('comisiones', 0)
             total_deducciones = self.valores_neto.get('total_deducciones', 0)
 
+            # CORREGIDO: Conceptos en formato normal
             data_deducciones = [
-                ["CONCEPTO", "VALOR"],
-                ["TOTAL GASTOS", f"Q{total_gastos:.2f}"],
-                ["TOTAL IMPUESTOS", f"Q{total_impuestos:.2f}"],
-                ["COMISIONES BANCARIAS", f"Q{comisiones_bancarias_neto:.2f}"],
-                ["COMISIONES", f"Q{comisiones:.2f}"],
-                ["TOTAL DEDUCCIONES", f"Q{total_deducciones:.2f}"]
+                ["Concepto", "Valor"],
+                ["Total gastos", f"Q{total_gastos:.2f}"],
+                ["Total impuestos", f"Q{total_impuestos:.2f}"],
+                ["Comisiones bancarias", f"Q{comisiones_bancarias_neto:.2f}"],
+                ["Comisiones", f"Q{comisiones_neto:.2f}"],
+                ["Total deducciones", f"Q{total_deducciones:.2f}"]
             ]
 
             tabla_deducciones = Table(data_deducciones, colWidths=[3 * inch, 1.5 * inch])
@@ -1820,19 +1964,20 @@ class CierreApp(QMainWindow):
             elements.append(Spacer(1, 0.2 * inch))
 
             # =====================================================
-            # TABLA 5: RESULTADO FINAL
+            # TABLA 5: RESULTADO FINAL (CORREGIDO)
             # =====================================================
-            elements.append(Paragraph("RESULTADO FINAL:", styles['Heading3']))
+            elements.append(Paragraph("Resultado final:", styles['Heading3']))
 
             total_depositar_ventas = self.valores_neto.get('total_depositar_ventas', 0)
             total_depositar_impuestos = self.valores_neto.get('total_depositar_impuestos', 0)
             total_final = self.valores_neto.get('total_final', 0)
 
+            # CORREGIDO: Conceptos en formato normal
             data_resultado_final = [
-                ["CONCEPTO", "VALOR"],
-                ["TOTAL A DEPOSITAR VENTAS", f"Q{total_depositar_ventas:.2f}"],
-                ["TOTAL A DEPOSITAR IMPUESTOS", f"Q{total_depositar_impuestos:.2f}"],
-                ["TOTAL", f"Q{total_final:.2f}"]
+                ["Concepto", "Valor"],
+                ["Total a depositar ventas", f"Q{total_depositar_ventas:.2f}"],
+                ["Total a depositar impuestos", f"Q{total_depositar_impuestos:.2f}"],
+                ["Total", f"Q{total_final:.2f}"]
             ]
 
             tabla_resultado_final = Table(data_resultado_final, colWidths=[3 * inch, 1.5 * inch])
@@ -1853,12 +1998,13 @@ class CierreApp(QMainWindow):
             elements.append(Spacer(1, 0.3 * inch))
 
             # =====================================================
-            # PIE DE PÁGINA
+            # PIE DE PÁGINA (CORREGIDO)
             # =====================================================
             elements.append(Spacer(1, 0.5 * inch))
-            elements.append(Paragraph("=== REPORTE GENERADO ===", subtitle_style))
+            elements.append(Paragraph("=== Reporte generado ===", subtitle_style))
             elements.append(
-                Paragraph(f"FECHA Y HORA: {datetime.now().strftime('%Y-%m-%d %H:%M:%S').upper()}", normal_style))
+                Paragraph(f"Fecha y hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                          normal_style))  # CORREGIDO: Sin .upper()
 
             # Construir el documento PDF
             doc.build(elements)
@@ -1873,10 +2019,6 @@ class CierreApp(QMainWindow):
             import traceback
             traceback.print_exc()
             return False
-
-    def agregar_funcionalidades_adicionales(self):
-            """Implementar en futuras versiones: ver historial de cierres, reportes, etc."""
-            pass
 
     def ejecutar_cierre_por_turno(self):
         """FUNCIÓN PRINCIPAL - CIERRE DE TURNO COMPLETO"""
@@ -2853,45 +2995,117 @@ class CierreApp(QMainWindow):
     def agregarcierre(self, nombre_producto, cantidad, tarjeta, efectivo, monto_total, fecha_hora, usuario,
                       id_caja=None):
         """
-        Método para agregar ventas individuales a la tabla de cierre
-        Este método es llamado desde el sistema de ventas para registrar cada venta
+        Método modificado para manejar ventas normales y de ajuste - REEMPLAZAR COMPLETO
         """
         try:
             if not self.db_connection:
                 print("❌ No hay conexión a la base de datos para agregar venta")
                 return False
 
-            print(f"💰 Registrando venta: {nombre_producto} - Q{monto_total:.2f}")
+            # ================================================================
+            # DETECTAR SI ES VENTA DE AJUSTE
+            # ================================================================
+            es_ajuste = False
+            fecha_original = fecha_hora
+            justificacion = None
+            usuario_ajuste = None
 
-            # Preparar la consulta SQL para insertar en la tabla 'cierre'
-            query = """
-                    INSERT INTO cierre (nombre, cantidad, tarjeta, efectivo, monto, fecha, usuario, id_caja)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) \
-                    """
+            try:
+                from .ventanaFuncional import VentanaFuncional
 
-            # Preparar los valores
-            values = (
-                nombre_producto,  # Nombre del producto/servicio
-                cantidad,  # Cantidad vendida
-                float(tarjeta),  # Monto pagado con tarjeta
-                float(efectivo),  # Monto pagado en efectivo
-                float(monto_total),  # Monto total de la venta
-                fecha_hora,  # Fecha y hora de la venta
-                usuario,  # Usuario que realizó la venta
-                id_caja  # ID de caja (puede ser None)
-            )
+                # Verificar si hay info de ajuste guardada
+                if hasattr(VentanaFuncional, '_es_venta_ajuste') and VentanaFuncional._es_venta_ajuste:
+                    es_ajuste = True
+                    fecha_original = VentanaFuncional._fecha_ajuste or fecha_hora
+                    justificacion = VentanaFuncional._motivo_ajuste or ""
+                    usuario_ajuste = usuario
 
-            # Ejecutar la consulta
+                    print(f"🔧 Registrando VENTA DE AJUSTE:")
+                    print(f"   - Fecha original: {fecha_original}")
+                    print(f"   - Justificación: {justificacion}")
+                    print(f"   - Usuario ajuste: {usuario_ajuste}")
+                else:
+                    print(f"💰 Registrando venta normal: {nombre_producto} - Q{monto_total:.2f}")
+
+            except Exception as e:
+                print(f"⚠️ Error detectando ajuste: {e}")
+                # Continuar como venta normal
+
+            # ================================================================
+            # PREPARAR CONSULTA SQL CON CAMPOS DE AJUSTE
+            # ================================================================
+            if es_ajuste:
+                query = """
+                        INSERT INTO cierre (nombre, cantidad, tarjeta, efectivo, monto, fecha, usuario, id_caja,
+                                            es_ajuste, justificacion, fecha_original, usuario_ajuste, fecha_ajuste)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()) \
+                        """
+
+                values = (
+                    nombre_producto,  # nombre
+                    cantidad,  # cantidad
+                    float(tarjeta),  # tarjeta
+                    float(efectivo),  # efectivo
+                    float(monto_total),  # monto
+                    fecha_original,  # fecha (fecha original de la venta)
+                    usuario,  # usuario
+                    id_caja,  # id_caja
+                    True,  # es_ajuste
+                    justificacion,  # justificacion
+                    fecha_original,  # fecha_original
+                    usuario_ajuste  # usuario_ajuste
+                )
+            else:
+                # Consulta normal (sin campos de ajuste)
+                query = """
+                        INSERT INTO cierre (nombre, cantidad, tarjeta, efectivo, monto, fecha, usuario, id_caja,
+                                            es_ajuste, justificacion, fecha_original, usuario_ajuste, fecha_ajuste)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) \
+                        """
+
+                values = (
+                    nombre_producto,  # nombre
+                    cantidad,  # cantidad
+                    float(tarjeta),  # tarjeta
+                    float(efectivo),  # efectivo
+                    float(monto_total),  # monto
+                    fecha_hora,  # fecha
+                    usuario,  # usuario
+                    id_caja,  # id_caja
+                    False,  # es_ajuste
+                    None,  # justificacion
+                    None,  # fecha_original
+                    None,  # usuario_ajuste
+                    None  # fecha_ajuste
+                )
+
+            # ================================================================
+            # EJECUTAR CONSULTA
+            # ================================================================
             self.cursor.execute(query, values)
             self.db_connection.commit()
 
-            print(f"✅ Venta registrada exitosamente:")
-            print(f"   - Producto: {nombre_producto}")
-            print(f"   - Cantidad: {cantidad}")
-            print(f"   - Efectivo: Q{efectivo:.2f}")
-            print(f"   - Tarjeta: Q{tarjeta:.2f}")
-            print(f"   - Total: Q{monto_total:.2f}")
-            print(f"   - Usuario: {usuario}")
+            # ================================================================
+            # MENSAJE DE CONFIRMACIÓN
+            # ================================================================
+            if es_ajuste:
+                print(f"✅ VENTA DE AJUSTE registrada exitosamente:")
+                print(f"   - Producto: {nombre_producto}")
+                print(f"   - Cantidad: {cantidad}")
+                print(f"   - Efectivo: Q{efectivo:.2f}")
+                print(f"   - Tarjeta: Q{tarjeta:.2f}")
+                print(f"   - Total: Q{monto_total:.2f}")
+                print(f"   - Fecha original: {fecha_original}")
+                print(f"   - Justificación: {justificacion}")
+                print(f"   - Usuario: {usuario}")
+            else:
+                print(f"✅ Venta normal registrada exitosamente:")
+                print(f"   - Producto: {nombre_producto}")
+                print(f"   - Cantidad: {cantidad}")
+                print(f"   - Efectivo: Q{efectivo:.2f}")
+                print(f"   - Tarjeta: Q{tarjeta:.2f}")
+                print(f"   - Total: Q{monto_total:.2f}")
+                print(f"   - Usuario: {usuario}")
 
             return True
 

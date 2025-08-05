@@ -74,15 +74,69 @@ class Manager:
         return self.execute_query(query, (id,))[0]
 
     def print_table_efectivo_v(self, dato):
-        if dato == 'Efectivo':
-            query = f"SELECT c.nombre, m.presentacion, c.existencias, (c.efectivo/c.existencias) AS Precio, (c.existencias * (c.efectivo/c.existencias)) AS precio_total FROM carrito AS c LEFT JOIN medicamentos AS m ON m.id = c.medicamentos_id;"
-        elif dato == 'Tarjeta':
-            query = f"SELECT c.nombre, m.presentacion, c.existencias, (c.tarjeta/c.existencias) AS Precio, (c.existencias * (c.tarjeta/c.existencias)) AS precio_total FROM carrito AS c LEFT JOIN medicamentos AS m ON m.id = c.medicamentos_id;"
-        self.cursor.execute(query)
+        """
+        MÉTODO COMPLETO CORREGIDO: Obtiene datos del carrito para generar PDFs
+        COPIAR Y PEGAR EN manager.py - REEMPLAZAR EL MÉTODO EXISTENTE
+        """
+        try:
+            print(f"🔍 Obteniendo datos para PDF - Método: {dato}")
 
+            if dato == 'Efectivo':
+                query = """SELECT c.nombre, \
+                                  COALESCE(m.presentacion, 'N/A') as presentacion, \
+                                  c.existencias, \
+                                  CASE \
+                                      WHEN c.existencias > 0 THEN ROUND(c.efectivo / c.existencias, 2) \
+                                      ELSE 0 \
+                                      END                         AS precio_unitario, \
+                                  c.efectivo                      AS precio_total
+                           FROM carrito AS c
+                                    LEFT JOIN medicamentos AS m ON m.id = c.medicamentos_id
+                           WHERE c.id != -1;"""
 
-        rows = self.cursor.fetchall()
-        return rows
+            elif dato == 'Tarjeta':
+                query = """SELECT c.nombre, \
+                                  COALESCE(m.presentacion, 'N/A') as presentacion, \
+                                  c.existencias, \
+                                  CASE \
+                                      WHEN c.existencias > 0 THEN ROUND(c.tarjeta / c.existencias, 2) \
+                                      ELSE 0 \
+                                      END                         AS precio_unitario, \
+                                  c.tarjeta                       AS precio_total
+                           FROM carrito AS c
+                                    LEFT JOIN medicamentos AS m ON m.id = c.medicamentos_id
+                           WHERE c.id != -1;"""
+            else:
+                # Método por defecto
+                query = """SELECT c.nombre, \
+                                  COALESCE(m.presentacion, 'N/A') as presentacion, \
+                                  c.existencias, \
+                                  CASE \
+                                      WHEN c.existencias > 0 THEN ROUND(c.efectivo / c.existencias, 2) \
+                                      ELSE 0 \
+                                      END                         AS precio_unitario, \
+                                  c.efectivo                      AS precio_total
+                           FROM carrito AS c
+                                    LEFT JOIN medicamentos AS m ON m.id = c.medicamentos_id
+                           WHERE c.id != -1;"""
+
+            print(f"🔍 Ejecutando consulta SQL...")
+            self.cursor.execute(query)
+            rows = self.cursor.fetchall()
+
+            print(f"🔍 Datos obtenidos: {len(rows) if rows else 0} filas")
+            if rows:
+                print(f"🔍 Primera fila ejemplo: {rows[0]}")
+            else:
+                print("⚠️ No se encontraron datos en el carrito")
+
+            return rows
+
+        except Exception as e:
+            print(f"❌ ERROR en print_table_efectivo_v: {e}")
+            import traceback
+            traceback.print_exc()
+            return []  # Retornar lista vacía en caso de error
 
     def obtener_usu(self):
         query = f"SELECT usuario FROM usuario WHERE rol = 'Vendedor'"
@@ -399,14 +453,22 @@ class Manager:
     def get_dinero_efectivo(self):
         query = f"SELECT SUM(existencias * (efectivo/existencias)) AS total_efectivo FROM carrito;"
         self.cursor.execute(query)
-        rows = self.cursor.fetchall()
-        return rows
+        result = self.cursor.fetchone()  # ✅ Cambio: fetchone() en lugar de fetchall()
+
+        if result and result[0] is not None:
+            return float(result[0])  # ✅ Extraer y convertir a float
+        else:
+            return 0.0
 
     def get_dinero_tarjeta(self):
         query = f"SELECT SUM(existencias * (tarjeta/existencias)) AS total_efectivo FROM carrito;"
         self.cursor.execute(query)
-        rows = self.cursor.fetchall()
-        return rows
+        result = self.cursor.fetchone()  # ✅ Cambio: fetchone() en lugar de fetchall()
+
+        if result and result[0] is not None:
+            return float(result[0])  # ✅ Extraer y convertir a float
+        else:
+            return 0.0
 
     def get_carrito_jo(self, table_name, data, values):
         query = f"SELECT nombre, tarjeta, efectivo FROM {table_name} WHERE {data} = '{values}';"
@@ -501,6 +563,28 @@ class Manager:
             query = f"INSERT INTO {table_name} VALUES ({input_data})"
             self.cursor.execute(query)
             return self.print_table(table_name)
+
+    def insert_into_cierre_safe(self, data_list):
+        query = """
+                INSERT INTO cierre
+                (nombre, cantidad, tarjeta, efectivo, monto, fecha, usuario, carrito_id,
+                 tipo_venta, motivo_ajuste, es_ajuste, justificacion, fecha_original,
+                 usuario_ajuste)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+        values = (
+            data_list[0], data_list[1], data_list[2], data_list[3], data_list[4],
+            data_list[5], data_list[6], data_list[7],
+            data_list[8] if len(data_list) > 8 else 'NORMAL',
+            data_list[10] if len(data_list) > 10 else None,
+            data_list[11] if len(data_list) > 11 else False,
+            data_list[12] if len(data_list) > 12 else None,
+            data_list[13] if len(data_list) > 13 else None,
+            data_list[14] if len(data_list) > 14 else None
+        )
+        self.cursor.execute(query, values)
+        self.conexion.commit()
+        return self.print_table('cierre')
 
     def update_table_with_id(self, table_name, table_data, column, data, id):
         data = f"'{data}'" if not (isinstance(data, numbers.Number)) else f"{data}"

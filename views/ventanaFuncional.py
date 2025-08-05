@@ -12,6 +12,8 @@ from datetime import datetime
 from .column_selector_farmacia import ColumnSelectorDialog, FarmaciaColumnManager
 # Al inicio del archivo ventanaFuncional.py, agregar esta importación si no está:
 from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QDate, Qt
+from PyQt5.QtWidgets import QFrame, QCheckBox, QDateEdit
 
 from reportlab.pdfgen import canvas
 
@@ -234,6 +236,7 @@ class VentanaFuncional(QMainWindow):
 
         self.btn_limpiar_tabla.clicked.connect(self.borrar_tabla)
         self.btn_enviar_datos.clicked.connect(self.ingresar_cierre)
+        self.agregar_controles_ajuste_carrito()
 
         self.radio_efectivo.toggled.connect(self.maleselected)
         self.radio_tarjeta.toggled.connect(self.femaleselected)
@@ -956,7 +959,61 @@ class VentanaFuncional(QMainWindow):
         self.switch_window.emit('contra_total')
 
     def iniciarDatos(self):
+        """Método modificado para manejar ajustes - REEMPLAZAR COMPLETO"""
         try:
+            # ================================================================
+            # DETECTAR SI ES VENTA DE AJUSTE
+            # ================================================================
+            es_venta_ajuste = False
+            fecha_ajuste = None
+            motivo_ajuste = ""
+
+            if hasattr(self, 'chk_venta_ajuste') and self.chk_venta_ajuste.isChecked():
+                print("🔧 Procesando VENTA DE AJUSTE...")
+
+                # Validar datos de ajuste ANTES de proceder
+                if not self.validar_datos_ajuste_antes_venta():
+                    return  # No proceder si hay errores
+
+                es_venta_ajuste = True
+                fecha_ajuste = self.date_ajuste_carrito.date().toPyDate()
+                motivo_ajuste = self.txt_motivo_ajuste.text().strip()
+
+                print(f"📅 Fecha original: {fecha_ajuste}")
+                print(f"📝 Motivo: {motivo_ajuste}")
+
+                # Confirmar con el usuario
+                respuesta = QMessageBox.question(
+                    self,
+                    "Confirmar Venta de Ajuste",
+                    f"""🔧 CONFIRMAR VENTA DE AJUSTE
+
+    📅 Fecha original: {fecha_ajuste.strftime('%d/%m/%Y')}
+    📝 Motivo: {motivo_ajuste}
+
+    Esta venta se registrará como AJUSTE CONTABLE.
+    ¿Desea continuar?""",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+
+                if respuesta == QMessageBox.No:
+                    print("❌ Venta de ajuste cancelada por el usuario")
+                    return
+
+            # ================================================================
+            # GUARDAR INFO DE AJUSTE PARA DatosCliente
+            # ================================================================
+            # Guardar en variables de clase para que DatosCliente las use
+            VentanaFuncional._es_venta_ajuste = es_venta_ajuste
+            VentanaFuncional._fecha_ajuste = fecha_ajuste
+            VentanaFuncional._motivo_ajuste = motivo_ajuste
+
+            print(f"🔧 Info de ajuste guardada: {es_venta_ajuste}, {fecha_ajuste}, {motivo_ajuste}")
+
+            # ================================================================
+            # CÓDIGO ORIGINAL - Abrir DatosCliente
+            # ================================================================
             from .datos_cliente import DatosCliente
             self.DatosCliente = DatosCliente()
 
@@ -972,47 +1029,84 @@ class VentanaFuncional(QMainWindow):
                         telefono = str(paciente_info[3]) if len(paciente_info) > 3 and paciente_info[3] else ""
                         dpi = str(paciente_info[4]) if len(paciente_info) > 4 and paciente_info[4] else ""
 
-                        # USAR LOS NOMBRES CORRECTOS DE LOS CAMPOS CON CONVERSIÓN A STRING
-
                         # Nombre completo
                         self.DatosCliente.le_agNombrePaciente.setText(str(nombre_completo))
                         print(f"✅ Nombre completado: {nombre_completo}")
 
                         # Teléfono (convertir a string)
-                        self.DatosCliente.le_agApellido.setText(telefono)
+                        self.DatosCliente.le_agApellido.setText(str(telefono))
                         print(f"✅ Teléfono completado: {telefono}")
 
-                        # NIT (usar DPI convertido a string)
-                        self.DatosCliente.le_NIT.setText(dpi)
-                        print(f"✅ NIT completado: {dpi}")
-
-                        # Dirección por defecto
-                        self.DatosCliente.le_agDpi_2.setText("Ciudad")
-                        print(f"✅ Dirección completada: Ciudad de Guatemala")
-
-                        # Mensaje de confirmación
-                        self.mostrar_notificacion_sutil(
-                            f"📋 Datos de {self.paciente_actual['nombre_completo']} auto-completados")
+                        # DPI/Dirección
+                        self.DatosCliente.le_NIT.setText(str(dpi))  # ✅ CORRECTO
+                        self.DatosCliente.le_agDpi_2.setText("")  # ✅ Dirección vacía
 
                 except Exception as e:
-                    print(f"Error al auto-completar datos: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    print(f"⚠️ Error auto-completando datos del paciente: {e}")
 
-            # Código original
-            self.label_28.setText("")
-            self.label_29.setText("")
-            self.label_30.setText("")
-            self.label_33.setText("")
+            # Pasar referencia de ventana funcional para acceder a controles de ajuste
+            self.DatosCliente.funcional = self
             self.DatosCliente.show()
-            self.bd_carrito.update()
-            self.bd_carrito.repaint()
-            self.limpiar_tabla(self.bd_carrito)
+
+            # Si era ajuste, resetear controles después de abrir DatosCliente
+            if es_venta_ajuste:
+                self.chk_venta_ajuste.setChecked(False)
+                self.txt_motivo_ajuste.clear()
+                self.date_ajuste_carrito.setDate(QDate.currentDate())
+                print("✅ Controles de ajuste reseteados")
 
         except Exception as e:
-            print(f"Error en iniciarDatos: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"❌ Error en iniciarDatos modificado: {e}")
+            QMessageBox.critical(self, "Error", f"Error iniciando datos: {e}")
+
+    @classmethod
+    def es_venta_ajuste(cls):
+        """Verifica si está activo el modo de venta por ajuste"""
+        return (hasattr(cls, '_es_venta_ajuste') and cls._es_venta_ajuste) or \
+            (hasattr(cls, '_ajuste_activo') and cls._ajuste_activo)
+
+    @classmethod
+    def activar_modo_ajuste(cls, fecha_original=None, motivo="Ajuste contable"):
+        """Activa el modo de venta por ajuste"""
+        try:
+            from datetime import datetime
+
+            cls._es_venta_ajuste = True
+            cls._ajuste_activo = True
+            cls._fecha_ajuste = fecha_original or datetime.now().date()
+            cls._motivo_ajuste = motivo
+            cls._fecha_original_ajuste = fecha_original
+            cls._justificacion_ajuste = motivo
+
+            print(f"🔧 MODO AJUSTE ACTIVADO:")
+            print(f"   - Fecha original: {cls._fecha_ajuste}")
+            print(f"   - Motivo: {cls._motivo_ajuste}")
+
+            return True
+
+        except Exception as e:
+            print(f"❌ Error activando modo ajuste: {e}")
+            return False
+
+    @classmethod
+    def desactivar_modo_ajuste(cls):
+        """Desactiva el modo de venta por ajuste"""
+        try:
+            variables_ajuste = [
+                '_es_venta_ajuste', '_ajuste_activo', '_fecha_ajuste',
+                '_motivo_ajuste', '_fecha_original_ajuste', '_justificacion_ajuste'
+            ]
+
+            for var in variables_ajuste:
+                if hasattr(cls, var):
+                    delattr(cls, var)
+
+            print("✅ Modo ajuste desactivado")
+            return True
+
+        except Exception as e:
+            print(f"❌ Error desactivando modo ajuste: {e}")
+            return False
 
     def obtener_datos_paciente_para_factura(self):
         """Obtiene los datos del paciente actual formateados para facturación"""
@@ -1057,6 +1151,13 @@ class VentanaFuncional(QMainWindow):
         self.FrameUsuarios.setStyleSheet("""QFrame {background-color: white;}""")
         self.FrameCierre.setStyleSheet("""QFrame {background-color: white;}""")
         self.cargarTablaFarmacia()
+        try:
+            # Ocultar frame de ajuste en farmacia
+            if hasattr(self, 'frame_ajuste'):
+                self.frame_ajuste.setVisible(False)
+            print("💊 Página farmacia - Frame ajuste oculto")
+        except:
+            pass
 
     def show_page(self):
         self.stackedWidget.setCurrentWidget(self.page_new)
@@ -1070,6 +1171,13 @@ class VentanaFuncional(QMainWindow):
         self.FrameCombo.setStyleSheet("""QFrame {background-color: white;}""")
         self.FrameUsuarios.setStyleSheet("""QFrame {background-color: white;}""")
         self.FrameCierre.setStyleSheet("""QFrame {background-color: white;}""")
+        try:
+            # Ocultar frame de ajuste en terapias
+            if hasattr(self, 'frame_ajuste'):
+                self.frame_ajuste.setVisible(False)
+            print("🏥 Página terapias - Frame ajuste oculto")
+        except:
+            pass
 
     def show_page_jornadas(self):
         self.stackedWidget.setCurrentWidget(self.page_jornadas)
@@ -1080,6 +1188,13 @@ class VentanaFuncional(QMainWindow):
         self.FrameCombo.setStyleSheet("""QFrame {background-color: white;}""")
         self.FrameUsuarios.setStyleSheet("""QFrame {background-color: white;}""")
         self.FrameCierre.setStyleSheet("""QFrame {background-color: white;}""")
+        try:
+            # Ocultar frame de ajuste en jornadas
+            if hasattr(self, 'frame_ajuste'):
+                self.frame_ajuste.setVisible(False)
+            print("📅 Página jornadas - Frame ajuste oculto")
+        except:
+            pass
 
     def show_page_pacientes(self):
         self.stackedWidget.setCurrentWidget(self.page_pacientes)
@@ -1091,6 +1206,13 @@ class VentanaFuncional(QMainWindow):
         self.FrameUsuarios.setStyleSheet("""QFrame {background-color: white;}""")
         self.FrameCierre.setStyleSheet("""QFrame {background-color: white;}""")
         self.cargarTablaPacientes()
+        try:
+            # Ocultar frame de ajuste en pacientes
+            if hasattr(self, 'frame_ajuste'):
+                self.frame_ajuste.setVisible(False)
+            print("👥 Página pacientes - Frame ajuste oculto")
+        except:
+            pass
 
     def show_page_combos(self):
         self.stackedWidget.setCurrentWidget(self.page_combos)
@@ -1166,6 +1288,13 @@ class VentanaFuncional(QMainWindow):
         self.stackedWidget.setCurrentWidget(self.page_carrito)
         self.radio_tarjeta.setChecked(True)
         self.femaleselected(True)
+        try:
+            # Mostrar frame de ajuste solo en carrito
+            if hasattr(self, 'frame_ajuste'):
+                self.frame_ajuste.setVisible(True)
+            print("📦 Página carrito - Frame ajuste visible")
+        except:
+            pass
 
     def check_expiration_date(self, fecha_vencimiento, casa_medica):
         """
@@ -3068,8 +3197,18 @@ class VentanaFuncional(QMainWindow):
 
     # ___________________________________________________________
 
-    def femaleselected(self, selected):
+    def femaleselected(self, selected=True):
+        """Método corregido para selección de tarjeta"""
         try:
+            print(f"🔍 femaleselected iniciado con selected: {selected}")
+
+            # Importar módulos necesarios
+            from .descuentosMedi import DescuentoMedi
+            import sql_structures
+            import datetime
+
+            manager = sql_structures.Manager()
+
             # Obtener valores iniciales de porcentaje y cantidad
             self.porcentajet = DescuentoMedi.get_porcentaje()
             self.cantidadt = DescuentoMedi.get_cantidad()
@@ -3078,77 +3217,162 @@ class VentanaFuncional(QMainWindow):
             self.resultadot = 0.0
             self.descuentot = 0.0
 
-            # Caso: Descuento basado en porcentaje
-            if self.porcentajet > 0:
-                if selected:
-                    self.cargarTablacarrito(modo='tarjeta')
-                    self.btn_pagodiv.show()
-                    self.frame_51.hide()
+            # CORRECCIÓN PRINCIPAL: Verificar que el carrito tenga datos
+            try:
+                id = manager.print_table("carrito")
+                print(f"🔍 Datos obtenidos del carrito: {type(id)} - {len(id) if id else 0} elementos")
 
-                    # Calcular suma y aplicar descuento
-                    manager = sql_structures.Manager()
-                    id = manager.get_dinero_tarjeta()
-                    for i in id:
-                        self.sumat += float(i[0])
+                # VALIDACIÓN: Verificar que id sea una lista válida
+                if not id:
+                    print("⚠️ No hay datos en carrito - finalizando femaleselected")
+                    return
 
+                if not isinstance(id, (list, tuple)):
+                    print(f"⚠️ Error: id es {type(id)} en lugar de lista: {id}")
+                    return
+
+            except Exception as e:
+                print(f"❌ Error obteniendo datos del carrito: {e}")
+                return
+
+            # PROCESAR CADA ELEMENTO DEL CARRITO
+            try:
+                print(f"🔍 Procesando {len(id)} elementos del carrito...")
+
+                for i, item in enumerate(id):
+                    try:
+                        print(f"🔍 Procesando item {i}: {item}")
+
+                        # Verificar que el item tenga la estructura esperada
+                        if not item or len(item) < 5:
+                            print(f"⚠️ Item {i} no tiene estructura válida: {item}")
+                            continue
+
+                        # Obtener ID del medicamento si existe
+                        medicamento_id = None
+                        if len(item) > 1 and item[1]:  # Si hay nombre
+                            try:
+                                medicamento_id = self.obtener_medicamento_id_por_nombre(item[1])
+                                print(f"🔍 Medicamento ID obtenido: {medicamento_id}")
+                            except Exception as e:
+                                print(f"⚠️ Error obteniendo medicamento ID: {e}")
+
+                        # Procesar datos del item de forma segura
+                        try:
+                            nombre = item[1] if len(item) > 1 else "Sin nombre"
+                            cantidad = item[2] if len(item) > 2 and item[2] else 0
+                            precio_total = float(item[4]) if len(item) > 4 and item[4] else 0.0
+                            precio_unitario = precio_total / cantidad if cantidad > 0 else 0.0
+
+                            print(f"   - Nombre: {nombre}")
+                            print(f"   - Cantidad: {cantidad}")
+                            print(f"   - Precio total: {precio_total}")
+                            print(f"   - Precio unitario: {precio_unitario}")
+
+                            # Sumar al total
+                            self.sumat += precio_total
+
+                        except (ValueError, TypeError, ZeroDivisionError) as e:
+                            print(f"⚠️ Error procesando datos del item {i}: {e}")
+                            continue
+
+                    except Exception as e:
+                        print(f"❌ Error procesando item {i}: {e}")
+                        continue
+
+                print(f"🔍 Suma total calculada: {self.sumat}")
+
+            except Exception as e:
+                print(f"❌ Error en el bucle principal: {e}")
+                return
+
+            # CÁLCULOS DE DESCUENTOS
+            try:
+                # Caso: Descuento basado en porcentaje
+                if self.porcentajet > 0:
                     self.descuentot = self.sumat * self.porcentajet
                     self.resultadot = self.sumat - self.descuentot
+                    print(f"🔍 Descuento por porcentaje: {self.porcentajet} = {self.descuentot}")
 
-                    # Actualizar etiquetas
-                    self.label_28.setText(str(self.sumat))
-                    self.label_29.setText(str(self.descuentot))
-                    self.label_30.setText(str(self.resultadot))
-
-            # Caso: Descuento basado en cantidad fija
-            elif self.cantidadt > 0:
-                if selected:
-                    self.cargarTablacarrito(modo='tarjeta')
-                    self.btn_pagodiv.show()
-                    self.frame_51.hide()
-
-                    # Calcular suma y aplicar descuento
-                    manager = sql_structures.Manager()
-                    id = manager.get_dinero_tarjeta()
-                    for i in id:
-                        self.sumat += float(i[0])
-
-                    self.descuentot = self.cantidadt
+                # Caso: Descuento basado en cantidad fija
+                elif self.cantidadt > 0:
+                    self.descuentot = min(self.cantidadt, self.sumat)  # No puede ser mayor al total
                     self.resultadot = self.sumat - self.descuentot
+                    print(f"🔍 Descuento por cantidad: {self.descuentot}")
 
-                    # Actualizar etiquetas
-                    self.label_28.setText(str(self.sumat))
-                    self.label_29.setText(str(self.descuentot))
-                    self.label_30.setText(str(self.resultadot))
-
-            # Caso: Sin descuentos
-            else:
-                if selected:
-                    self.cargarTablacarrito(modo='tarjeta')
-                    self.btn_pagodiv.show()
-                    self.frame_51.hide()
-
-                    # Calcular solo la suma
-                    manager = sql_structures.Manager()
-                    id = manager.get_dinero_tarjeta()
-                    for i in id:
-                        self.sumat += float(i[0])
-
+                # Sin descuento
+                else:
                     self.resultadot = self.sumat
+                    self.descuentot = 0.0
+                    print(f"🔍 Sin descuento aplicado")
 
-                    # Actualizar etiquetas
-                    self.label_28.setText(str(self.sumat))
-                    self.label_29.setText("0.0")
-                    self.label_30.setText(str(self.resultadot))
+                print(f"🔍 Resultado final: {self.resultadot}")
 
-            # Actualizar totales después de todos los cambios
-            self.actualizar_totales_carrito()
+            except Exception as e:
+                print(f"❌ Error calculando descuentos: {e}")
+                self.resultadot = self.sumat
+                self.descuentot = 0.0
+
+            # ACTUALIZAR ETIQUETAS DE LA INTERFAZ
+            try:
+                if hasattr(self, 'label_29') and self.label_29:
+                    self.label_29.setText(f"{self.resultadot:.2f}")
+
+                if hasattr(self, 'label_30') and self.label_30:
+                    self.label_30.setText(f"{self.resultadot:.2f}")
+
+                if hasattr(self, 'label_28') and self.label_28:
+                    self.label_28.setText(f"{self.sumat:.2f}")
+
+                print(f"✅ Etiquetas actualizadas")
+
+            except Exception as e:
+                print(f"⚠️ Error actualizando etiquetas: {e}")
+
+            # GUARDAR MÉTODO DE PAGO
+            try:
+                VentanaFuncional._metodo_pago_guardado = "tarjeta"
+                print(f"✅ Método de pago guardado: tarjeta")
+            except Exception as e:
+                print(f"⚠️ Error guardando método de pago: {e}")
+
+            # CARGAR TABLA EN MODO TARJETA
+            try:
+                self.cargarTablacarrito_tarjeta()
+                print(f"✅ Tabla carrito cargada en modo tarjeta")
+            except Exception as e:
+                print(f"⚠️ Error cargando tabla carrito: {e}")
+
+            print(f"✅ femaleselected completado exitosamente")
 
         except Exception as e:
-            QMessageBox.about(self, 'Aviso Pago Tarjeta', 'Ingrese un medicamento/terapia.')
+            print(f"❌ ERROR CRÍTICO en femaleselected: {e}")
+            import traceback
+            traceback.print_exc()
 
-    def maleselected(self, selected):
+            # Valores por defecto en caso de error
+            try:
+                if hasattr(self, 'label_29') and self.label_29:
+                    self.label_29.setText("0.00")
+                if hasattr(self, 'label_30') and self.label_30:
+                    self.label_30.setText("0.00")
+                if hasattr(self, 'label_28') and self.label_28:
+                    self.label_28.setText("0.00")
+            except:
+                pass
+
+    def maleselected(self, selected=True):
+        """Método corregido para selección de efectivo"""
         try:
-            # Obtener valores iniciales de porcentaje y cantidad
+            print(f"🔍 maleselected iniciado con selected: {selected}")
+
+            # Importar módulos necesarios
+            from .descuentosMedi import DescuentoMedi
+            import sql_structures
+
+            manager = sql_structures.Manager()
+
+            # Obtener valores iniciales
             self.porcentaje = DescuentoMedi.get_porcentaje()
             self.cantidad = DescuentoMedi.get_cantidad()
 
@@ -3156,73 +3380,86 @@ class VentanaFuncional(QMainWindow):
             self.resultado = 0.0
             self.descuento = 0.0
 
-            # Caso: Descuento basado en porcentaje
-            if self.porcentaje > 0:
-                if selected:
-                    self.cargarTablacarrito(modo='efectivo')
-                    self.btn_pagodiv.hide()
-                    self.frame_51.show()
+            # CORRECCIÓN: Verificar que el carrito tenga datos
+            try:
+                id = manager.print_table("carrito")
+                print(f"🔍 Datos obtenidos del carrito: {type(id)} - {len(id) if id else 0} elementos")
 
-                    # Calcular suma y aplicar descuento
-                    manager = sql_structures.Manager()
-                    id = manager.get_dinero_efectivo()
-                    for i in id:
-                        self.suma += float(i[0])
+                if not id or not isinstance(id, (list, tuple)):
+                    print("⚠️ No hay datos válidos en carrito")
+                    return
 
+            except Exception as e:
+                print(f"❌ Error obteniendo datos del carrito: {e}")
+                return
+
+            # PROCESAR ELEMENTOS
+            try:
+                for i, item in enumerate(id):
+                    try:
+                        if not item or len(item) < 5:
+                            continue
+
+                        precio_total = float(item[4]) if item[4] else 0.0
+                        self.suma += precio_total
+
+                    except (ValueError, TypeError) as e:
+                        print(f"⚠️ Error procesando item {i}: {e}")
+                        continue
+
+                print(f"🔍 Suma total efectivo: {self.suma}")
+
+            except Exception as e:
+                print(f"❌ Error en bucle efectivo: {e}")
+                return
+
+            # CÁLCULOS DE DESCUENTOS
+            try:
+                if self.porcentaje > 0:
                     self.descuento = self.suma * self.porcentaje
                     self.resultado = self.suma - self.descuento
-
-                    # Actualizar etiquetas
-                    self.label_28.setText(str(self.suma))
-                    self.label_29.setText(str(self.descuento))
-                    self.label_30.setText(str(self.resultado))
-
-            # Caso: Descuento basado en cantidad fija
-            elif self.cantidad > 0:
-                if selected:
-                    self.cargarTablacarrito(modo='efectivo')
-                    self.btn_pagodiv.hide()
-                    self.frame_51.show()
-
-                    # Calcular suma y aplicar descuento
-                    manager = sql_structures.Manager()
-                    id = manager.get_dinero_efectivo()
-                    for i in id:
-                        self.suma += float(i[0])
-
-                    self.descuento = self.cantidad
+                elif self.cantidad > 0:
+                    self.descuento = min(self.cantidad, self.suma)
                     self.resultado = self.suma - self.descuento
-
-                    # Actualizar etiquetas
-                    self.label_28.setText(str(self.suma))
-                    self.label_29.setText(str(self.descuento))
-                    self.label_30.setText(str(self.resultado))
-
-            # Caso: Sin descuentos
-            else:
-                if selected:
-                    self.cargarTablacarrito(modo='efectivo')
-                    self.btn_pagodiv.hide()
-                    self.frame_51.show()
-
-                    # Calcular solo la suma
-                    manager = sql_structures.Manager()
-                    id = manager.get_dinero_efectivo()
-                    for i in id:
-                        self.suma += float(i[0])
-
+                else:
                     self.resultado = self.suma
+                    self.descuento = 0.0
 
-                    # Actualizar etiquetas
-                    self.label_28.setText(str(self.suma))
-                    self.label_29.setText("0.0")
-                    self.label_30.setText(str(self.resultado))
+            except Exception as e:
+                print(f"❌ Error calculando descuentos efectivo: {e}")
+                self.resultado = self.suma
 
-            # Actualizar totales después de todos los cambios
-            self.actualizar_totales_carrito()
+            # ACTUALIZAR ETIQUETAS
+            try:
+                if hasattr(self, 'label_28') and self.label_28:
+                    self.label_28.setText(f"{self.suma:.2f}")
+                if hasattr(self, 'label_29') and self.label_29:
+                    self.label_29.setText(f"{self.resultado:.2f}")
+                if hasattr(self, 'label_30') and self.label_30:
+                    self.label_30.setText(f"{self.resultado:.2f}")
+
+            except Exception as e:
+                print(f"⚠️ Error actualizando etiquetas efectivo: {e}")
+
+            # GUARDAR MÉTODO DE PAGO
+            try:
+                VentanaFuncional._metodo_pago_guardado = "efectivo"
+                print(f"✅ Método de pago guardado: efectivo")
+            except:
+                pass
+
+            # CARGAR TABLA
+            try:
+                self.cargarTablacarrito()
+            except Exception as e:
+                print(f"⚠️ Error cargando tabla efectivo: {e}")
+
+            print(f"✅ maleselected completado")
 
         except Exception as e:
-            QMessageBox.about(self, 'Aviso Pago Efectivo', 'Ingrese un medicamento/terapia.')
+            print(f"❌ ERROR CRÍTICO en maleselected: {e}")
+            import traceback
+            traceback.print_exc()
 
     def suma_total_pagos(self):
         VentanaFuncional._dinero_total = str(self.label_30.text())
@@ -3660,30 +3897,42 @@ class VentanaFuncional(QMainWindow):
             traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Error al procesar la venta: {str(e)}")
 
-    def obtener_metodo_pago_seleccionado(self):
-        """Obtiene el método de pago seleccionado en los radio buttons"""
+    def debug_tabla_carrito(self):
+        """Función de debugging para ver el contenido de la tabla"""
         try:
-            print(f"🔍 Verificando radio buttons:")
-            print(f"🔍 radio_efectivo existe: {hasattr(self, 'radio_efectivo')}")
-            print(f"🔍 radio_tarjeta existe: {hasattr(self, 'radio_tarjeta')}")
+            print("🔍 DEBUG TABLA CARRITO:")
+            print(f"   - Filas: {self.bd_carrito.rowCount()}")
+            print(f"   - Columnas: {self.bd_carrito.columnCount()}")
 
+            # Mostrar headers
+            headers = []
+            for i in range(self.bd_carrito.columnCount()):
+                header_item = self.bd_carrito.horizontalHeaderItem(i)
+                header_text = header_item.text() if header_item else f"Col_{i}"
+                headers.append(header_text)
+            print(f"   - Headers: {headers}")
+
+            # Mostrar algunas filas de ejemplo
+            for fila in range(min(3, self.bd_carrito.rowCount())):
+                fila_data = []
+                for columna in range(self.bd_carrito.columnCount()):
+                    item = self.bd_carrito.item(fila, columna)
+                    text = item.text() if item else "None"
+                    fila_data.append(text)
+                print(f"   - Fila {fila}: {fila_data}")
+
+        except Exception as e:
+            print(f"❌ Error en debug tabla: {e}")
+
+    def obtener_metodo_pago_seleccionado(self):
+        """Obtiene el método de pago seleccionado - MEJORADO"""
+        try:
             if hasattr(self, 'radio_efectivo') and self.radio_efectivo.isChecked():
-                print(f"🔍 Efectivo seleccionado")
                 return "efectivo"
             elif hasattr(self, 'radio_tarjeta') and self.radio_tarjeta.isChecked():
-                print(f"🔍 Tarjeta seleccionada")
                 return "tarjeta"
             else:
-                # Verificar si alguno está marcado por defecto
-                if hasattr(self, 'radio_efectivo'):
-                    efectivo_checked = self.radio_efectivo.isChecked()
-                    print(f"🔍 Efectivo checked: {efectivo_checked}")
-                if hasattr(self, 'radio_tarjeta'):
-                    tarjeta_checked = self.radio_tarjeta.isChecked()
-                    print(f"🔍 Tarjeta checked: {tarjeta_checked}")
-
-                print(f"🔍 Ningún método seleccionado, usando efectivo por defecto")
-                return "efectivo"
+                return "efectivo"  # Por defecto
         except Exception as e:
             print(f"Error al obtener método de pago: {e}")
             return "efectivo"
@@ -4361,7 +4610,14 @@ class VentanaFuncional(QMainWindow):
 
     @classmethod
     def get_diferencia_efectivo(cls):
-        return cls._diferencia_efectivo
+        try:
+            if hasattr(cls, '_diferencia_efectivo'):
+                valor = cls._diferencia_efectivo
+                return float(valor) if valor is not None else 0.0
+            else:
+                return 0.0
+        except (ValueError, TypeError):
+            return 0.0
 
     @classmethod
     def get_contra(cls):
@@ -4632,6 +4888,256 @@ class VentanaFuncional(QMainWindow):
 
         except Exception as e:
             print(f"Error al limpiar paciente: {e}")
+
+    def agregar_controles_ajuste_carrito(self):
+        """Agregar controles de venta de ajuste - SOLO PARA MÓDULO CARRITO"""
+        try:
+            # Frame vertical (más alto que ancho)
+            self.frame_ajuste = QFrame()
+            self.frame_ajuste.setFixedSize(200, 200)  # Más alto que ancho
+            self.frame_ajuste.setStyleSheet("""
+                QFrame {
+                    background-color: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 8px;
+                    margin: 3px;
+                    padding: 8px;
+                }
+            """)
+
+            # Layout VERTICAL (no horizontal)
+            layout_ajuste = QVBoxLayout(self.frame_ajuste)
+            layout_ajuste.setContentsMargins(8, 8, 8, 8)
+            layout_ajuste.setSpacing(8)
+
+            # Checkbox
+            self.chk_venta_ajuste = QCheckBox("🔧 Venta de Ajuste")
+            self.chk_venta_ajuste.setStyleSheet("""
+                QCheckBox {
+                    font-weight: bold;
+                    color: #856404;
+                    font-size: 11px;
+                }
+            """)
+            self.chk_venta_ajuste.stateChanged.connect(self.toggle_venta_ajuste)
+            layout_ajuste.addWidget(self.chk_venta_ajuste)
+
+            # Fecha (oculta inicialmente)
+            fecha_layout = QHBoxLayout()
+            fecha_layout.addWidget(QLabel("Fecha:"))
+            self.date_ajuste_carrito = QDateEdit()
+            self.date_ajuste_carrito.setDate(QDate.currentDate())
+            self.date_ajuste_carrito.setCalendarPopup(True)
+            self.date_ajuste_carrito.setDisplayFormat("dd/MM/yyyy")
+            self.date_ajuste_carrito.setVisible(False)
+            self.date_ajuste_carrito.setStyleSheet("font-size: 10px;")
+            fecha_layout.addWidget(self.date_ajuste_carrito)
+            layout_ajuste.addLayout(fecha_layout)
+
+            # Motivo (oculto inicialmente)
+            layout_ajuste.addWidget(QLabel("Motivo:"))
+            self.txt_motivo_ajuste = QLineEdit()
+            self.txt_motivo_ajuste.setPlaceholderText("Ej: Corte de luz...")
+            self.txt_motivo_ajuste.setVisible(False)
+            self.txt_motivo_ajuste.setStyleSheet("font-size: 10px; padding: 4px;")
+            layout_ajuste.addWidget(self.txt_motivo_ajuste)
+
+            layout_ajuste.addStretch()
+
+            # COLOCAR MÁS ABAJO Y SOLO EN CARRITO
+            self.colocar_solo_en_carrito()
+
+            # INICIALMENTE OCULTO - solo mostrar en módulo carrito
+            self.frame_ajuste.setVisible(False)
+
+            print("✅ Controles de ajuste configurados (solo para carrito)")
+
+        except Exception as e:
+            print(f"❌ Error agregando controles de ajuste: {e}")
+
+    def colocar_solo_en_carrito(self):
+        """Colocar el frame solo cuando esté en módulo carrito"""
+        try:
+            # Posición fija más abajo en el área de la derecha
+            self.frame_ajuste.setParent(self)
+            self.frame_ajuste.move(1350, 520)  # Más abajo que antes
+            self.frame_ajuste.show()
+            print("✅ Frame colocado en posición fija")
+
+        except Exception as e:
+            print(f"❌ Error colocando frame: {e}")
+
+    def insertar_frame_en_layout(self):
+        """Insertar el frame en el layout usando el código anterior"""
+        try:
+            # Usar el mismo código de inserción que funcionó antes
+            try:
+                carrito_parent = self.bd_carrito.parent()
+                if carrito_parent and hasattr(carrito_parent, 'layout') and carrito_parent.layout():
+                    parent_layout = carrito_parent.layout()
+                    parent_layout.addWidget(self.frame_ajuste)
+                    print("✅ Frame estético agregado al layout principal del carrito")
+                    return
+            except Exception as e:
+                print(f"⚠️ Error con opción 1: {e}")
+
+            try:
+                boton_parent = self.btn_enviar_datos.parent()
+                if boton_parent and hasattr(boton_parent, 'layout') and boton_parent.layout():
+                    boton_layout = boton_parent.layout()
+                    if hasattr(boton_layout, 'insertWidget'):
+                        boton_layout.insertWidget(0, self.frame_ajuste)
+                    else:
+                        boton_layout.addWidget(self.frame_ajuste)
+                    print("✅ Frame estético agregado cerca de los botones")
+                    return
+            except Exception as e:
+                print(f"⚠️ Error con opción 2: {e}")
+
+            try:
+                main_widget = self.centralWidget() or self
+                if hasattr(main_widget, 'layout') and main_widget.layout():
+                    main_layout = main_widget.layout()
+                    main_layout.addWidget(self.frame_ajuste)
+                    print("✅ Frame estético agregado al layout principal")
+                    return
+            except Exception as e:
+                print(f"⚠️ Error con opción 3: {e}")
+
+            # Opción manual como respaldo
+            self.frame_ajuste.setParent(self)
+            self.frame_ajuste.move(20, 100)
+            self.frame_ajuste.resize(900, 120)
+            self.frame_ajuste.show()
+            print("✅ Frame estético colocado manualmente")
+
+        except Exception as e:
+            print(f"❌ Error insertando frame estético: {e}")
+
+    def colocar_debajo_vincular_historial(self):
+        """Colocar el frame debajo de los botones Vincular/Historial"""
+        try:
+            # Buscar el botón "Vincular" o "Historial" para ubicar el frame
+            vincular_btn = None
+            historial_btn = None
+
+            # Buscar por texto del botón
+            for btn in self.findChildren(QPushButton):
+                if "Vincular" in btn.text():
+                    vincular_btn = btn
+                elif "Historial" in btn.text():
+                    historial_btn = btn
+
+            # Si encontramos alguno de los botones
+            if vincular_btn or historial_btn:
+                boton_referencia = vincular_btn or historial_btn
+                parent_widget = boton_referencia.parent()
+
+                if parent_widget and hasattr(parent_widget, 'layout') and parent_widget.layout():
+                    parent_layout = parent_widget.layout()
+                    parent_layout.addWidget(self.frame_ajuste)
+                    print("✅ Frame colocado debajo de Vincular/Historial")
+                    return
+
+            # Si no encontramos los botones, buscar por el layout más probable
+            # Buscar el widget que contenga "Sin paciente vinculado"
+            for widget in self.findChildren(QWidget):
+                for label in widget.findChildren(QLabel):
+                    if "Sin paciente vinculado" in label.text():
+                        parent_widget = widget
+                        if hasattr(parent_widget, 'layout') and parent_widget.layout():
+                            parent_layout = parent_widget.layout()
+                            parent_layout.addWidget(self.frame_ajuste)
+                            print("✅ Frame colocado en sección de pacientes")
+                            return
+
+            # Método de respaldo - colocar manualmente
+            self.frame_ajuste.setParent(self)
+            self.frame_ajuste.move(1220, 450)  # Posición aproximada según la imagen
+            self.frame_ajuste.resize(400, 60)
+            self.frame_ajuste.show()
+            print("✅ Frame colocado manualmente en área de pacientes")
+
+        except Exception as e:
+            print(f"❌ Error colocando frame: {e}")
+
+    def validar_datos_ajuste_antes_venta(self):
+        """Validar datos de ajuste antes de procesar venta"""
+        if not hasattr(self, 'chk_venta_ajuste') or not self.chk_venta_ajuste.isChecked():
+            return True  # No es ajuste
+
+        if not self.txt_motivo_ajuste.text().strip():
+            QMessageBox.warning(self, "Falta Justificación", "Debe ingresar el motivo del ajuste")
+            return False
+
+        fecha_ajuste = self.date_ajuste_carrito.date().toPyDate()
+        fecha_actual = QDate.currentDate().toPyDate()
+        if fecha_ajuste > fecha_actual:
+            QMessageBox.warning(self, "Fecha Inválida", "La fecha del ajuste no puede ser futura")
+            return False
+
+        return True
+
+    def toggle_venta_ajuste(self, estado):
+        """Mostrar/ocultar campos de ajuste"""
+        es_ajuste = estado == Qt.Checked
+
+        # Encontrar los labels por el layout
+        fecha_layout = self.frame_ajuste.layout().itemAt(1).layout()
+        fecha_label = fecha_layout.itemAt(0).widget()
+        motivo_label = self.frame_ajuste.layout().itemAt(2).widget()
+
+        # Mostrar u ocultar campos
+        fecha_label.setVisible(es_ajuste)
+        self.date_ajuste_carrito.setVisible(es_ajuste)
+        motivo_label.setVisible(es_ajuste)
+        self.txt_motivo_ajuste.setVisible(es_ajuste)
+
+        if es_ajuste:
+            # Cambiar a color naranja cuando está activo
+            self.frame_ajuste.setStyleSheet("""
+                QFrame {
+                    background-color: #ffe8cc;
+                    border: 2px solid #fd7e14;
+                    border-radius: 8px;
+                    margin: 3px;
+                    padding: 8px;
+                }
+            """)
+            self.txt_motivo_ajuste.setFocus()
+            print("🔧 Modo ajuste ACTIVADO")
+        else:
+            # Volver al color original
+            self.frame_ajuste.setStyleSheet("""
+                QFrame {
+                    background-color: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 8px;
+                    margin: 3px;
+                    padding: 8px;
+                }
+            """)
+            self.txt_motivo_ajuste.clear()
+            print("📄 Modo normal")
+
+    def mostrar_ocultar_ajuste_segun_modulo(self):
+        """Mostrar frame de ajuste solo en módulo carrito"""
+        try:
+            # Verificar si estamos en la página de carrito
+            if hasattr(self, 'stackedWidget'):
+                pagina_actual = self.stackedWidget.currentIndex()
+                # Asumiendo que el carrito es una página específica del stackedWidget
+                # (necesitarías confirmar el índice correcto de tu página de carrito)
+                es_carrito = (pagina_actual == 1)  # Ajustar según tu configuración
+            else:
+                # Método alternativo: verificar si la tabla de carrito es visible
+                es_carrito = hasattr(self, 'bd_carrito') and self.bd_carrito.isVisible()
+
+            if hasattr(self, 'frame_ajuste'):
+                self.frame_ajuste.setVisible(es_carrito)
+
+        except Exception as e:
+            print(f"❌ Error controlando visibilidad: {e}")
 
 
 
